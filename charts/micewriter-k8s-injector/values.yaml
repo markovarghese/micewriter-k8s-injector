@@ -1,0 +1,31 @@
+replicaCount: 1
+
+image:
+  repository: k8s-node-1.local:5000/micewriter-k8s-injector
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# TLS — cert-manager is installed by micewriter-local-infra/run.ps1 up.
+tls:
+  secretName: micewriter-webhook-cert
+
+# Engine sidecar injected into every annotated pod.
+engine:
+  image: k8s-node-1.local:5000/micewriter-engine:latest
+  # Endpoints set to the k3s ServiceLB addresses from micewriter-local-infra.
+  minioUrl: "http://k8s-node-1.local:9000"
+  minioAccessKey: "micewriter"
+  minioSecretKey: "micewriter123"
+  minioBucket: "iceberg"
+  nessieUri: "http://k8s-node-1.local:19120/iceberg/v1"
+  nessieWarehouse: "s3://iceberg"
+  rocksdbStorageClass: "local-path"
+  rocksdbStorageSize: "10Gi"
+
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 50m
+  limits:
+    memory: 128Mi
+    cpu: 200m
