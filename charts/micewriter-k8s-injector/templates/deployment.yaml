@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: micewriter-k8s-injector
+  namespace: micewriter-system
+  labels:
+    app: micewriter-k8s-injector
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: micewriter-k8s-injector
+  template:
+    metadata:
+      labels:
+        app: micewriter-k8s-injector
+    spec:
+      containers:
+        - name: webhook
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --port=8443
+            - --tls-cert=/tls/tls.crt
+            - --tls-key=/tls/tls.key
+          ports:
+            - containerPort: 8443
+              name: https
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          env:
+            - name: ENGINE_IMAGE
+              value: {{ .Values.engine.image | quote }}
+            - name: MINIO_URL
+              value: {{ .Values.engine.minioUrl | quote }}
+            - name: MINIO_ACCESS_KEY
+              value: {{ .Values.engine.minioAccessKey | quote }}
+            - name: MINIO_SECRET_KEY
+              value: {{ .Values.engine.minioSecretKey | quote }}
+            - name: MINIO_BUCKET
+              value: {{ .Values.engine.minioBucket | quote }}
+            - name: NESSIE_URI
+              value: {{ .Values.engine.nessieUri | quote }}
+            - name: NESSIE_WAREHOUSE
+              value: {{ .Values.engine.nessieWarehouse | quote }}
+            - name: ROCKSDB_STORAGE_CLASS
+              value: {{ .Values.engine.rocksdbStorageClass | quote }}
+            - name: ROCKSDB_STORAGE_SIZE
+              value: {{ .Values.engine.rocksdbStorageSize | quote }}
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.secretName }}

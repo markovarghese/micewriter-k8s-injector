@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: micewriter-webhook-cert
+  namespace: micewriter-system
+spec:
+  secretName: {{ .Values.tls.secretName }}
+  dnsNames:
+    - micewriter-k8s-injector.micewriter-system.svc
+    - micewriter-k8s-injector.micewriter-system.svc.cluster.local
+  issuerRef:
+    name: micewriter-selfsigned-issuer
+    kind: Issuer

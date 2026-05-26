@@ -1,0 +1,10 @@
+apiVersion: v2
+name: micewriter-k8s-injector
+description: Kubernetes Mutating Webhook that auto-injects the micewriter-engine sidecar into annotated pods.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - iceberg
+  - sidecar
+  - webhook

@@ -1,0 +1,38 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: micewriter-k8s-injector
+  annotations:
+    # cert-manager's CA injector reads this annotation and populates caBundle
+    # automatically from the Certificate named in the value.
+    cert-manager.io/inject-ca-from: micewriter-system/micewriter-webhook-cert
+webhooks:
+  - name: micewriter-injector.micewriter-system.svc
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    # Ignore means pod creation succeeds even if this webhook is unreachable.
+    # Change to Fail for production to guarantee injection on every annotated pod.
+    failurePolicy: Ignore
+    clientConfig:
+      service:
+        name: micewriter-k8s-injector
+        namespace: micewriter-system
+        path: /mutate
+        port: 443
+      # caBundle is populated by cert-manager CA injector — do not set manually.
+      caBundle: ""
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    # Exclude system namespaces and the webhook's own namespace to avoid loops.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values:
+            - kube-system
+            - micewriter-system
+            - micewriter-infra
+            - cert-manager
