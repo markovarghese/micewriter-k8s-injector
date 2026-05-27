@@ -22,8 +22,8 @@ if (-not (Test-Path $kubeconfig)) {
     exit 1
 }
 
-docker info > $null 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Error "Docker is not running."; exit 1 }
+# docker info > $null 2>&1
+# if ($LASTEXITCODE -ne 0) { Write-Error "Docker is not running."; exit 1 }
 
 $registry  = "k8s-node-1.local:5000"
 $image     = "micewriter-k8s-injector"
@@ -44,9 +44,19 @@ function Invoke-Helm {
 switch ($Target) {
     "push" {
         Write-Host "Building $image..."
-        docker build -t $fullTag .
-        Write-Host "Pushing $fullTag..."
-        docker push $fullTag
+        docker build -t "localhost:5000/${image}:${tag}" .
+        
+        Write-Host "Starting temporary port-forward to registry..."
+        docker run --rm -d --name registry-pf -p 5000:5000 -v "${kubeconfig}:/kubeconfig:ro" -e KUBECONFIG=/kubeconfig bitnami/kubectl:latest port-forward -n micewriter-infra svc/registry 5000:5000 --address 0.0.0.0
+        Start-Sleep -Seconds 5
+        
+        try {
+            Write-Host "Pushing to localhost:5000/${image}:${tag}..."
+            docker push "localhost:5000/${image}:${tag}"
+        } finally {
+            Write-Host "Stopping port-forward..."
+            docker rm -f registry-pf
+        }
     }
 
     "deploy" {
