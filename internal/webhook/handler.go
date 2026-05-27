@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NewHandler returns an http.Handler that decodes an AdmissionReview, calls the
@@ -31,9 +32,17 @@ func NewHandler(injector *Injector, log *slog.Logger) http.Handler {
 			http.Error(w, "empty AdmissionReview request", http.StatusBadRequest)
 			return
 		}
+		if len(review.Request.Object.Raw) == 0 {
+			http.Error(w, "empty AdmissionReview request object", http.StatusBadRequest)
+			return
+		}
 
 		review.Response = injector.Mutate(review.Request)
 		review.Response.UID = review.Request.UID
+		review.TypeMeta = metav1.TypeMeta{
+			APIVersion: "admission.k8s.io/v1",
+			Kind:       "AdmissionReview",
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(review); err != nil {

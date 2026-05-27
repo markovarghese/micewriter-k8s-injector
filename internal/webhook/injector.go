@@ -32,7 +32,13 @@ type InjectorConfig struct {
 	NessieWarehouse     string
 	RocksdbStorageClass string
 	RocksdbStorageSize  string
+	EngineCpuRequest    string
+	EngineMemRequest    string
+	EngineCpuLimit      string
+	EngineMemLimit      string
 }
+
+func boolPtr(b bool) *bool { return &b }
 
 // Injector builds the JSON Patch that mutates an incoming Pod spec.
 type Injector struct {
@@ -104,18 +110,34 @@ func (inj *Injector) buildPatches(pod *corev1.Pod) []jsonPatch {
 	}
 	rocksdbVol := inj.ephemeralVolume()
 
+	var addSockVol, addRocksdbVol = true, true
+	for _, v := range pod.Spec.Volumes {
+		if v.Name == sockVolumeName {
+			addSockVol = false
+		}
+		if v.Name == rocksdbVolumeName {
+			addRocksdbVol = false
+		}
+	}
+
 	if len(pod.Spec.Volumes) == 0 {
-		// Create the volumes array from scratch.
-		patches = append(patches, jsonPatch{
-			Op:    "add",
-			Path:  "/spec/volumes",
-			Value: []corev1.Volume{sockVol, rocksdbVol},
-		})
+		var vols []corev1.Volume
+		if addSockVol { vols = append(vols, sockVol) }
+		if addRocksdbVol { vols = append(vols, rocksdbVol) }
+		if len(vols) > 0 {
+			patches = append(patches, jsonPatch{
+				Op:    "add",
+				Path:  "/spec/volumes",
+				Value: vols,
+			})
+		}
 	} else {
-		patches = append(patches,
-			jsonPatch{Op: "add", Path: "/spec/volumes/-", Value: sockVol},
-			jsonPatch{Op: "add", Path: "/spec/volumes/-", Value: rocksdbVol},
-		)
+		if addSockVol {
+			patches = append(patches, jsonPatch{Op: "add", Path: "/spec/volumes/-", Value: sockVol})
+		}
+		if addRocksdbVol {
+			patches = append(patches, jsonPatch{Op: "add", Path: "/spec/volumes/-", Value: rocksdbVol})
+		}
 	}
 
 	// --- 2. Socket volume mount on every existing container -------------------
@@ -123,18 +145,52 @@ func (inj *Injector) buildPatches(pod *corev1.Pod) []jsonPatch {
 	// writes at /var/run/app/iceberg.sock. Both sides need the shared emptyDir.
 	sockMount := corev1.VolumeMount{Name: sockVolumeName, MountPath: sockMountPath}
 	for i, c := range pod.Spec.Containers {
-		if len(c.VolumeMounts) == 0 {
-			patches = append(patches, jsonPatch{
-				Op:    "add",
-				Path:  fmt.Sprintf("/spec/containers/%d/volumeMounts", i),
-				Value: []corev1.VolumeMount{sockMount},
-			})
-		} else {
-			patches = append(patches, jsonPatch{
-				Op:    "add",
-				Path:  fmt.Sprintf("/spec/containers/%d/volumeMounts/-", i),
-				Value: sockMount,
-			})
+		hasMount := false
+		for _, m := range c.VolumeMounts {
+			if m.Name == sockVolumeName {
+				hasMount = true
+				break
+			}
+		}
+		if !hasMount {
+			if len(c.VolumeMounts) == 0 {
+				patches = append(patches, jsonPatch{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/containers/%d/volumeMounts", i),
+					Value: []corev1.VolumeMount{sockMount},
+				})
+			} else {
+				patches = append(patches, jsonPatch{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/containers/%d/volumeMounts/-", i),
+					Value: sockMount,
+				})
+			}
+		}
+	}
+
+	for i, c := range pod.Spec.InitContainers {
+		hasMount := false
+		for _, m := range c.VolumeMounts {
+			if m.Name == sockVolumeName {
+				hasMount = true
+				break
+			}
+		}
+		if !hasMount {
+			if len(c.VolumeMounts) == 0 {
+				patches = append(patches, jsonPatch{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/initContainers/%d/volumeMounts", i),
+					Value: []corev1.VolumeMount{sockMount},
+				})
+			} else {
+				patches = append(patches, jsonPatch{
+					Op:    "add",
+					Path:  fmt.Sprintf("/spec/initContainers/%d/volumeMounts/-", i),
+					Value: sockMount,
+				})
+			}
 		}
 	}
 
@@ -167,14 +223,19 @@ func (inj *Injector) engineContainer() corev1.Container {
 			{Name: sockVolumeName, MountPath: sockMountPath},
 			{Name: rocksdbVolumeName, MountPath: rocksdbMountPath},
 		},
+		SecurityContext: &corev1.SecurityContext{
+			RunAsNonRoot:             boolPtr(true),
+			AllowPrivilegeEscalation: boolPtr(false),
+			ReadOnlyRootFilesystem:   boolPtr(true),
+		},
 		Resources: corev1.ResourceRequirements{
 			Requests: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("128Mi"),
-				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse(inj.cfg.EngineMemRequest),
+				corev1.ResourceCPU:    resource.MustParse(inj.cfg.EngineCpuRequest),
 			},
 			Limits: corev1.ResourceList{
-				corev1.ResourceMemory: resource.MustParse("512Mi"),
-				corev1.ResourceCPU:    resource.MustParse("500m"),
+				corev1.ResourceMemory: resource.MustParse(inj.cfg.EngineMemLimit),
+				corev1.ResourceCPU:    resource.MustParse(inj.cfg.EngineCpuLimit),
 			},
 		},
 	}

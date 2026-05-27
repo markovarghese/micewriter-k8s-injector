@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/markovarghese/micewriter-k8s-injector/internal/webhook"
 )
@@ -27,6 +31,10 @@ func main() {
 		NessieWarehouse:     getEnv("NESSIE_WAREHOUSE", "s3://iceberg"),
 		RocksdbStorageClass: getEnv("ROCKSDB_STORAGE_CLASS", "local-path"),
 		RocksdbStorageSize:  getEnv("ROCKSDB_STORAGE_SIZE", "10Gi"),
+		EngineCpuRequest:    getEnv("ENGINE_CPU_REQUEST", "100m"),
+		EngineMemRequest:    getEnv("ENGINE_MEM_REQUEST", "128Mi"),
+		EngineCpuLimit:      getEnv("ENGINE_CPU_LIMIT", "500m"),
+		EngineMemLimit:      getEnv("ENGINE_MEM_LIMIT", "512Mi"),
 	}
 
 	injector := webhook.NewInjector(cfg, log)
@@ -37,10 +45,31 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	log.Info("micewriter-k8s-injector starting", "port", *port)
-	if err := http.ListenAndServeTLS(":"+*port, *certFile, *keyFile, mux); err != nil {
-		log.Error("server exited", "err", err)
-		os.Exit(1)
+	srv := &http.Server{
+		Addr:    ":" + *port,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Info("micewriter-k8s-injector starting", "port", *port)
+		if err := srv.ListenAndServeTLS(*certFile, *keyFile); err != nil && err != http.ErrServerClosed {
+			log.Error("server exited", "err", err)
+			os.Exit(1)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	log.Info("shutting down server...")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("server shutdown failed", "err", err)
+	} else {
+		log.Info("server gracefully stopped")
 	}
 }
 

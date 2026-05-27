@@ -12,7 +12,7 @@ webhooks:
     sideEffects: None
     # Ignore means pod creation succeeds even if this webhook is unreachable.
     # Change to Fail for production to guarantee injection on every annotated pod.
-    failurePolicy: Ignore
+    failurePolicy: {{ .Values.failurePolicy | default "Ignore" }}
     clientConfig:
       service:
         name: micewriter-k8s-injector

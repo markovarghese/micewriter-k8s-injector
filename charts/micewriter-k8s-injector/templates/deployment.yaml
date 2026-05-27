@@ -17,6 +17,8 @@ spec:
     spec:
       containers:
         - name: webhook
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
@@ -33,6 +35,13 @@ spec:
               scheme: HTTPS
             initialDelaySeconds: 5
             periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 2
+            periodSeconds: 5
           env:
             - name: ENGINE_IMAGE
               value: {{ .Values.engine.image | quote }}
@@ -52,6 +61,14 @@ spec:
               value: {{ .Values.engine.rocksdbStorageClass | quote }}
             - name: ROCKSDB_STORAGE_SIZE
               value: {{ .Values.engine.rocksdbStorageSize | quote }}
+            - name: ENGINE_CPU_REQUEST
+              value: {{ .Values.engine.resources.requests.cpu | quote }}
+            - name: ENGINE_MEM_REQUEST
+              value: {{ .Values.engine.resources.requests.memory | quote }}
+            - name: ENGINE_CPU_LIMIT
+              value: {{ .Values.engine.resources.limits.cpu | quote }}
+            - name: ENGINE_MEM_LIMIT
+              value: {{ .Values.engine.resources.limits.memory | quote }}
           volumeMounts:
             - name: tls
               mountPath: /tls

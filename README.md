@@ -8,7 +8,7 @@ Kubernetes Mutating Webhook. When a pod is created with the annotation `iceberg-
 | `micewriter-engine` sidecar container | Runs the Rust caching/flushing engine |
 | `emptyDir` volume at `/var/run/app` | Shared UDS socket between app and engine |
 | Generic Ephemeral PVC at `/var/lib/rocksdb` | Dedicated high-IOPS storage for RocksDB |
-| Volume mount on every existing container | Gives the app container access to the UDS socket |
+| Volume mount on every existing container and `initContainer` | Gives the app container access to the UDS socket |
 
 ## Prerequisites
 
@@ -37,14 +37,15 @@ Kubernetes Mutating Webhook. When a pod is created with the annotation `iceberg-
 
 ## Configuration
 
-All engine endpoint values are in `charts/micewriter-k8s-injector/values.yaml`.
+All engine endpoint values, resources, and failure policies are in `charts/micewriter-k8s-injector/values.yaml`.
 Override at deploy time with `--set`:
 
 ```bash
 helm upgrade --install micewriter-k8s-injector charts/micewriter-k8s-injector \
   --namespace micewriter-system --create-namespace \
   --set engine.minioUrl=http://my-minio:9000 \
-  --set engine.nessieUri=http://my-nessie:19120/iceberg/v1
+  --set engine.nessieUri=http://my-nessie:19120/iceberg/v1 \
+  --set engine.resources.limits.cpu=1000m
 ```
 
 ## How It Works
@@ -102,4 +103,4 @@ metadata:
     iceberg-stream.yourcompany.com/inject: "true"
 ```
 
-The injector is idempotent — re-applying a manifest that already has the sidecar is safe.
+The injector is idempotent — re-applying a manifest that already has the sidecar is safe, and defining existing matching volume names prevents duplicate volumes from being attached.

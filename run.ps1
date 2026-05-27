@@ -11,11 +11,14 @@ param([Parameter(Mandatory)][string]$Target)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Path to the kubeconfig produced by the k3sonhyperv Ansible playbook.
-# Update this if your k3sonhyperv repo is in a different location.
-$kubeconfig = "D:\githubrepos\k3sonhyperv\kubeconfig"
+# Path to the kubeconfig
+if ($env:KUBECONFIG) {
+    $kubeconfig = $env:KUBECONFIG
+} else {
+    $kubeconfig = "$HOME\.kube\config"
+}
 if (-not (Test-Path $kubeconfig)) {
-    Write-Error "kubeconfig not found at $kubeconfig — run install-k3s.yml first."
+    Write-Error "kubeconfig not found at $kubeconfig"
     exit 1
 }
 

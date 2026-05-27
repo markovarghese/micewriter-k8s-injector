@@ -3,7 +3,9 @@ replicaCount: 1
 image:
   repository: k8s-node-1.local:5000/micewriter-k8s-injector
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
+
+failurePolicy: Ignore
 
 # TLS — cert-manager is installed by micewriter-local-infra/run.ps1 up.
 tls:
@@ -21,6 +23,22 @@ engine:
   nessieWarehouse: "s3://iceberg"
   rocksdbStorageClass: "local-path"
   rocksdbStorageSize: "10Gi"
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
 
 resources:
   requests:
