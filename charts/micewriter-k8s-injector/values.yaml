@@ -15,11 +15,11 @@ tls:
 engine:
   image: k8s-node-1.local:5000/micewriter-engine:latest
   # Endpoints set to the k3s ServiceLB addresses from micewriter-local-infra.
-  minioUrl: "http://k8s-node-1.local:9000"
+  minioUrl: "http://micewriter-minio.micewriter-infra.svc.cluster.local:9000"
   minioAccessKey: "micewriter"
   minioSecretKey: "micewriter123"
   minioBucket: "iceberg"
-  nessieUri: "http://k8s-node-1.local:19120/iceberg/v1"
+  nessieUri: "http://micewriter-nessie.micewriter-infra.svc.cluster.local:19120/iceberg/v1"
   nessieWarehouse: "s3://iceberg"
   rocksdbStorageClass: "local-path"
   rocksdbStorageSize: "10Gi"
