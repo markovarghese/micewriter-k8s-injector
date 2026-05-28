@@ -1,0 +1,30 @@
+# Go build output
+bin/
+*.exe
+
+# Go module cache (go.sum is intentionally tracked)
+vendor/
+
+# Helm chart dependencies and packaged charts
+charts/*/charts/
+*.tgz
+
+# TLS certs (generated locally or by cert-manager; never commit private keys)
+*.pem
+*.key
+*.crt
+*.csr
+
+# Local kubeconfig overrides
+kubeconfig
+kubeconfig.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
