@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: micewriter-k8s-injector
-  namespace: micewriter-system
+  namespace: {{ .Release.Namespace }}
   labels:
     app: micewriter-k8s-injector
 spec:
@@ -48,9 +48,15 @@ spec:
             - name: MINIO_URL
               value: {{ .Values.engine.minioUrl | quote }}
             - name: MINIO_ACCESS_KEY
-              value: {{ .Values.engine.minioAccessKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: micewriter-engine-credentials
+                  key: MINIO_ACCESS_KEY
             - name: MINIO_SECRET_KEY
-              value: {{ .Values.engine.minioSecretKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: micewriter-engine-credentials
+                  key: MINIO_SECRET_KEY
             - name: MINIO_BUCKET
               value: {{ .Values.engine.minioBucket | quote }}
             - name: NESSIE_URI

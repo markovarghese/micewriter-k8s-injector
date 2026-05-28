@@ -14,6 +14,7 @@ import (
 // injector, and writes the mutated AdmissionReview back to the API server.
 func NewHandler(injector *Injector, log *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Error("failed to read request body", "err", err)

@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	injectAnnotation  = "iceberg-stream.yourcompany.com/inject"
+	injectAnnotation  = "iceberg-stream.micewriter.io/inject"
 	sidecarName       = "micewriter-engine"
 	sockVolumeName    = "iceberg-sock"
 	rocksdbVolumeName = "rocksdb-cache"
@@ -36,6 +36,21 @@ type InjectorConfig struct {
 	EngineMemRequest    string
 	EngineCpuLimit      string
 	EngineMemLimit      string
+}
+
+func (c *InjectorConfig) Validate() error {
+	for _, f := range []struct{ name, val string }{
+		{"ENGINE_CPU_REQUEST", c.EngineCpuRequest},
+		{"ENGINE_MEM_REQUEST", c.EngineMemRequest},
+		{"ENGINE_CPU_LIMIT", c.EngineCpuLimit},
+		{"ENGINE_MEM_LIMIT", c.EngineMemLimit},
+		{"ROCKSDB_STORAGE_SIZE", c.RocksdbStorageSize},
+	} {
+		if _, err := resource.ParseQuantity(f.val); err != nil {
+			return fmt.Errorf("%s=%q: %w", f.name, f.val, err)
+		}
+	}
+	return nil
 }
 
 func boolPtr(b bool) *bool { return &b }
@@ -208,7 +223,7 @@ func (inj *Injector) engineContainer() corev1.Container {
 	return corev1.Container{
 		Name:            sidecarName,
 		Image:           inj.cfg.EngineImage,
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullAlways,
 		Env: []corev1.EnvVar{
 			{Name: "MINIO_URL", Value: inj.cfg.MinioURL},
 			{Name: "MINIO_ACCESS_KEY", Value: inj.cfg.MinioAccessKey},

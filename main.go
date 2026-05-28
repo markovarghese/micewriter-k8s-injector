@@ -37,6 +37,11 @@ func main() {
 		EngineMemLimit:      getEnv("ENGINE_MEM_LIMIT", "512Mi"),
 	}
 
+	if err := cfg.Validate(); err != nil {
+		log.Error("invalid configuration", "err", err)
+		os.Exit(1)
+	}
+
 	injector := webhook.NewInjector(cfg, log)
 
 	mux := http.NewServeMux()

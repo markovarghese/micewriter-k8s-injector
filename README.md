@@ -1,7 +1,7 @@
 # micewriter-k8s-injector
 > Part of the [mIceWriter Ingestion Ecosystem](../micewriter-hub/README.md)
 
-Kubernetes Mutating Webhook. When a pod is created with the annotation `iceberg-stream.yourcompany.com/inject: "true"`, this webhook automatically patches its spec to add:
+Kubernetes Mutating Webhook. When a pod is created with the annotation `iceberg-stream.micewriter.io/inject: "true"`, this webhook automatically patches its spec to add:
 
 | Addition | What it does |
 |----------|-------------|
@@ -100,7 +100,7 @@ Add this annotation to any pod template spec to enable injection:
 ```yaml
 metadata:
   annotations:
-    iceberg-stream.yourcompany.com/inject: "true"
+    iceberg-stream.micewriter.io/inject: "true"
 ```
 
 The injector is idempotent — re-applying a manifest that already has the sidecar is safe, and defining existing matching volume names prevents duplicate volumes from being attached.

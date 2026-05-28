@@ -1,9 +1,10 @@
 IMAGE      := micewriter-k8s-injector
 TAG        := latest
+REGISTRY   := localhost:5000
 CHART_DIR  := charts/micewriter-k8s-injector
 NAMESPACE  := micewriter-system
 
-.PHONY: build test image deploy undeploy tidy
+.PHONY: build test image push deploy undeploy tidy
 
 ## Fetch and resolve Go dependencies
 tidy:
@@ -20,6 +21,11 @@ test:
 ## Build the Docker image
 image:
 	docker build -t $(IMAGE):$(TAG) .
+
+## Push to the local registry (requires registry port-forward to be active)
+push:
+	docker build -t $(REGISTRY)/$(IMAGE):$(TAG) .
+	docker push $(REGISTRY)/$(IMAGE):$(TAG)
 
 ## Deploy the Helm chart (requires cert-manager to be installed)
 deploy:
