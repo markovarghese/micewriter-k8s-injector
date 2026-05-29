@@ -47,7 +47,7 @@ switch ($Target) {
         docker build -t "localhost:5000/${image}:${tag}" .
         
         Write-Host "Starting temporary port-forward to registry..."
-        docker run --rm -d --name registry-pf -p 5000:5000 -v "${kubeconfig}:/kubeconfig:ro" -e KUBECONFIG=/kubeconfig bitnami/kubectl:latest port-forward -n micewriter-infra svc/registry 5000:5000 --address 0.0.0.0
+        $pfProcess = Start-Process -FilePath "kubectl" -ArgumentList "--kubeconfig `"$kubeconfig`" port-forward -n micewriter-infra svc/registry 5000:5000" -PassThru -WindowStyle Hidden
         Start-Sleep -Seconds 5
         
         try {
@@ -55,7 +55,7 @@ switch ($Target) {
             docker push "localhost:5000/${image}:${tag}"
         } finally {
             Write-Host "Stopping port-forward..."
-            docker rm -f registry-pf
+            if ($pfProcess) { Stop-Process -Id $pfProcess.Id -Force -ErrorAction SilentlyContinue }
         }
     }
 
