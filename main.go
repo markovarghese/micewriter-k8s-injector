@@ -35,6 +35,7 @@ func main() {
 		EngineMemRequest:    getEnv("ENGINE_MEM_REQUEST", "128Mi"),
 		EngineCpuLimit:      getEnv("ENGINE_CPU_LIMIT", "500m"),
 		EngineMemLimit:      getEnv("ENGINE_MEM_LIMIT", "512Mi"),
+		EnableManualFlush:   getEnv("ENABLE_MANUAL_FLUSH", "false"),
 	}
 
 	if err := cfg.Validate(); err != nil {

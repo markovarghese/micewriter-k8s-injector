@@ -36,6 +36,7 @@ type InjectorConfig struct {
 	EngineMemRequest    string
 	EngineCpuLimit      string
 	EngineMemLimit      string
+	EnableManualFlush   string
 }
 
 func (c *InjectorConfig) Validate() error {
@@ -233,6 +234,7 @@ func (inj *Injector) engineContainer() corev1.Container {
 			{Name: "NESSIE_WAREHOUSE", Value: inj.cfg.NessieWarehouse},
 			{Name: "SOCKET_PATH", Value: sockMountPath + "/iceberg.sock"},
 			{Name: "ROCKSDB_PATH", Value: rocksdbMountPath},
+			{Name: "ENABLE_MANUAL_FLUSH", Value: inj.cfg.EnableManualFlush},
 		},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: sockVolumeName, MountPath: sockMountPath},

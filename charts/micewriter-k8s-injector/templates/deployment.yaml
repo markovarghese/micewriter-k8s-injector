@@ -75,6 +75,8 @@ spec:
               value: {{ .Values.engine.resources.limits.cpu | quote }}
             - name: ENGINE_MEM_LIMIT
               value: {{ .Values.engine.resources.limits.memory | quote }}
+            - name: ENABLE_MANUAL_FLUSH
+              value: {{ .Values.engine.enableManualFlush | quote }}
           volumeMounts:
             - name: tls
               mountPath: /tls

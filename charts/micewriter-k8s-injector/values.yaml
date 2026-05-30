@@ -19,10 +19,11 @@ engine:
   minioAccessKey: "micewriter"
   minioSecretKey: "micewriter123"
   minioBucket: "iceberg"
-  nessieUri: "http://micewriter-nessie.micewriter-infra.svc.cluster.local:19120/iceberg"
+  nessieUri: "http://micewriter-nessie.micewriter-infra.svc.cluster.local:19120/iceberg/"
   nessieWarehouse: "s3://iceberg"
   rocksdbStorageClass: "local-path"
   rocksdbStorageSize: "10Gi"
+  enableManualFlush: "true"
   securityContext:
     runAsNonRoot: true
     allowPrivilegeEscalation: false
